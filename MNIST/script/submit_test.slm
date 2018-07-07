@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Created by Xinqiang Ding (xqding@umich.edu)
+# at 2018/05/20 02:40:13
+
+#SBATCH --job-name=IWAE
+#SBATCH --time=01:00:00
+#SBATCH --partition=gpu
+#SBATCH --array=0-11
+#SBATCH --output=./slurm_out/IWAE_%a.out
+#SBATCH --cpus-per-task=5
+#SBATCH --gres=gpu:1
+#SBATCH --exclude=gollum[001-070,075-080]
+##SBATCH --open-mode=append
+
+module load cuda/9.0
+
+model=(VAE IWAE)
+num_layers=(1 2)
+num_samples=(1 5 50)
+idx1=$(echo $SLURM_ARRAY_TASK_ID / 3 / 2 | bc)
+idx2=$(echo $SLURM_ARRAY_TASK_ID / 3 % 2 | bc)
+idx3=$(echo $SLURM_ARRAY_TASK_ID % 3 | bc)
+
+echo $SLURM_ARRAY_TASK_ID, ${model[$idx1]}, ${num_layers[$idx2]}, ${num_samples[$idx3]}
+python ./script/main_test.py \
+       --model ${model[$idx1]} \
+       --num_stochastic_layer ${num_layers[$idx2]} \
+       --num_samples ${num_samples[$idx3]} \
+       --epoch 9999
