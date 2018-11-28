@@ -57,8 +57,8 @@ elif args.num_stochastic_layers == 2:
 vae.double()
 vae.cuda()
 
-optimizer = optim.Adam(vae.parameters(), weight_decay = 0, amsgrad = True)
-num_epoches = 10000
+optimizer = optim.Adam(vae.parameters())
+num_epoches = 5000
 train_loss_epoch = []
 for epoch in range(num_epoches):
     running_loss = []    
@@ -77,11 +77,14 @@ for epoch in range(num_epoches):
         optimizer.step()    
         print(("Epoch: {:>4}, Step: {:>4}, loss: {:>4.2f}")
               .format(epoch, idx, loss.item()), flush = True)
-        running_loss.append(loss.item())        
+        running_loss.append(loss.item())
+
+
     train_loss_epoch.append(np.mean(running_loss))
 
-    if (epoch + 1) % 200 == 0:
+    if (epoch + 1) % 1000 == 0:
         torch.save(vae.state_dict(),
                    ("./output/model/{}_layers_{}_k_{}_epoch_{}.model")
                    .format(args.model, args.num_stochastic_layers,
                            args.num_samples, epoch))
+

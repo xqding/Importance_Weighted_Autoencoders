@@ -71,20 +71,21 @@ class IWAE_1(nn.Module):
         mu_h1, sigma_h1 = self.encoder_h1(x)
         eps = Variable(sigma_h1.data.new(sigma_h1.size()).normal_())
         h1 = mu_h1 + sigma_h1 * eps                
-        return h1, mu_h1, sigma_h1
+        return h1, mu_h1, sigma_h1, eps
     
     def decoder(self, h1):
         p = self.decoder_x(h1)
         return p
     
     def forward(self, x):
-        h1, mu_h1, sigma_h1 = self.encoder(x)
+        h1, mu_h1, sigma_h1, eps = self.encoder(x)
         p = self.decoder(h1)
-        return (h1, mu_h1, sigma_h1), (p)
+        return (h1, mu_h1, sigma_h1, eps), (p)
 
     def train_loss(self, inputs):
-        h1, mu_h1, sigma_h1 = self.encoder(inputs)
-        log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
+        h1, mu_h1, sigma_h1, eps = self.encoder(inputs)
+        #log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
+        log_Qh1Gx = torch.sum(-0.5*(eps)**2 - torch.log(sigma_h1), -1)
         
         p = self.decoder(h1)
         log_Ph1 = torch.sum(-0.5*h1**2, -1)
@@ -99,8 +100,10 @@ class IWAE_1(nn.Module):
         return loss
 
     def test_loss(self, inputs):
-        h1, mu_h1, sigma_h1 = self.encoder(inputs)
-        log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)        
+        h1, mu_h1, sigma_h1, eps = self.encoder(inputs)
+        #log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
+        log_Qh1Gx = torch.sum(-0.5*(eps)**2 - torch.log(sigma_h1), -1)
+        
         p = self.decoder(h1)
         log_Ph1 = torch.sum(-0.5*h1**2, -1)
         log_PxGh1 = torch.sum(inputs*torch.log(p) + (1-inputs)*torch.log(1-p), -1)
@@ -134,14 +137,14 @@ class IWAE_2(nn.Module):
         
     def encoder(self, x):
         mu_h1, sigma_h1 = self.encoder_h1(x)
-        eps = Variable(sigma_h1.data.new(sigma_h1.size()).normal_())
-        h1 = mu_h1 + sigma_h1 * eps
+        eps1 = Variable(sigma_h1.data.new(sigma_h1.size()).normal_())
+        h1 = mu_h1 + sigma_h1 * eps1
         
         mu_h2, sigma_h2 = self.encoder_h2(h1)
-        eps = Variable(sigma_h2.data.new(sigma_h2.size()).normal_())
-        h2 = mu_h2 + sigma_h2 * eps
+        eps2 = Variable(sigma_h2.data.new(sigma_h2.size()).normal_())
+        h2 = mu_h2 + sigma_h2 * eps2
         
-        return (h1, mu_h1, sigma_h1), (h2, mu_h2, sigma_h2)
+        return (h1, mu_h1, sigma_h1, eps1), (h2, mu_h2, sigma_h2, eps2)
     
     def decoder(self, h1, h2):
         mu_h1, sigma_h1 = self.decoder_h1(h2)
@@ -151,12 +154,16 @@ class IWAE_2(nn.Module):
     def forward(self, x):
         (h1, mu_h1, sigma_h1), (h2, mu_h2, sigma_h2) = self.encoder(x)
         p = self.decoder(h2)        
-        return ((h1, mu_h1, sigma_h1), (h2, mu_h2, sigma_h2)), (p)
+        return ((h1, mu_h1, sigma_h1, eps1), (h2, mu_h2, sigma_h2, eps2)), (p)
 
     def train_loss(self, inputs):
-        (h1, mu_h1, sigma_h1), (h2, mu_h2, sigma_h2) = self.encoder(inputs)
-        log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
-        log_Qh2Gh1 = torch.sum(-0.5*((h2-mu_h2)/sigma_h2)**2 - torch.log(sigma_h2), -1)
+        (h1, mu_h1, sigma_h1, eps1), (h2, mu_h2, sigma_h2, eps2) = self.encoder(inputs)
+        # log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
+        # log_Qh2Gh1 = torch.sum(-0.5*((h2-mu_h2)/sigma_h2)**2 - torch.log(sigma_h2), -1)
+
+        log_Qh1Gx = torch.sum(-0.5*(eps1)**2 - torch.log(sigma_h1), -1)
+        log_Qh2Gh1 = torch.sum(-0.5*(eps2)**2 - torch.log(sigma_h2), -1)
+        
         
         (h1, mu_h1, sigma_h1), (p) = self.decoder(h1, h2)
         log_Ph2 = torch.sum(-0.5*h2**2, -1)
@@ -172,9 +179,11 @@ class IWAE_2(nn.Module):
         return loss
 
     def test_loss(self, inputs):
-        (h1, mu_h1, sigma_h1), (h2, mu_h2, sigma_h2) = self.encoder(inputs)
-        log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
-        log_Qh2Gh1 = torch.sum(-0.5*((h2-mu_h2)/sigma_h2)**2 - torch.log(sigma_h2), -1)
+        (h1, mu_h1, sigma_h1, eps1), (h2, mu_h2, sigma_h2, eps2) = self.encoder(inputs)
+        # log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
+        # log_Qh2Gh1 = torch.sum(-0.5*((h2-mu_h2)/sigma_h2)**2 - torch.log(sigma_h2), -1)
+        log_Qh1Gx = torch.sum(-0.5*(eps1)**2 - torch.log(sigma_h1), -1)
+        log_Qh2Gh1 = torch.sum(-0.5*(eps2)**2 - torch.log(sigma_h2), -1)
         
         (h1, mu_h1, sigma_h1), (p) = self.decoder(h1, h2)
         log_Ph2 = torch.sum(-0.5*h2**2, -1)
