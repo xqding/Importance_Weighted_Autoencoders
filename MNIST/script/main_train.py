@@ -44,7 +44,7 @@ batch_size = 1000
 train_data = MNIST_Dataset(train_image)
 
 train_data_loader = DataLoader(train_data, batch_size = batch_size,
-                               shuffle = True, num_workers = 5)
+                               shuffle = True)
 
 test_data = MNIST_Dataset(test_image)
 test_data_loader = DataLoader(test_data, batch_size = batch_size)

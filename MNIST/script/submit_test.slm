@@ -7,11 +7,9 @@
 #SBATCH --time=01:00:00
 #SBATCH --partition=gpu
 #SBATCH --array=0-11
-#SBATCH --output=./slurm_out/IWAE_%a.out
-#SBATCH --cpus-per-task=5
+#SBATCH --output=./slurm_out/IWAE_test_%a.out
 #SBATCH --gres=gpu:1
-#SBATCH --exclude=gollum[001-070,075-080]
-##SBATCH --open-mode=append
+#SBATCH --exclude=gollum[003-045]
 
 module load cuda/9.0
 
@@ -27,4 +25,4 @@ python ./script/main_test.py \
        --model ${model[$idx1]} \
        --num_stochastic_layer ${num_layers[$idx2]} \
        --num_samples ${num_samples[$idx3]} \
-       --epoch 9999
+       --epoch 4999
